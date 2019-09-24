@@ -29,5 +29,5 @@ ENV AWS_REGION=us-east-1 \
     CONTENT_ENCODING=false \
     DISABLE_COMPRESSION=true
 
-COPY --from=0 /aws-s3-proxy /aws-s3-proxy
+COPY --from=1 /aws-s3-proxy /aws-s3-proxy
 ENTRYPOINT ["/aws-s3-proxy"]
