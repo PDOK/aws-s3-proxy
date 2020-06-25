@@ -25,33 +25,34 @@ import (
 )
 
 type config struct { // nolint
-	awsRegion          string        // AWS_REGION
-	awsAPIEndpoint     string        // AWS_API_ENDPOINT
-	s3Bucket           string        // AWS_S3_BUCKET
-	s3KeyPrefix        string        // AWS_S3_KEY_PREFIX
-	indexDocument      string        // INDEX_DOCUMENT
-	directoryListing   bool          // DIRECTORY_LISTINGS
-	dirListingFormat   string        // DIRECTORY_LISTINGS_FORMAT
-	httpCacheControl   string        // HTTP_CACHE_CONTROL (max-age=86400, no-cache ...)
-	httpExpires        string        // HTTP_EXPIRES (Thu, 01 Dec 1994 16:00:00 GMT ...)
-	basicAuthUser      string        // BASIC_AUTH_USER
-	basicAuthPass      string        // BASIC_AUTH_PASS
-	port               string        // APP_PORT
-	host               string        // APP_HOST
-	accessLog          bool          // ACCESS_LOG
-	sslCert            string        // SSL_CERT_PATH
-	sslKey             string        // SSL_KEY_PATH
-	stripPath          string        // STRIP_PATH
-	contentEncoding    bool          // CONTENT_ENCODING
-	corsAllowOrigin    string        // CORS_ALLOW_ORIGIN
-	corsAllowMethods   string        // CORS_ALLOW_METHODS
-	corsAllowHeaders   string        // CORS_ALLOW_HEADERS
-	corsMaxAge         int64         // CORS_MAX_AGE
-	healthCheckPath    string        // HEALTHCHECK_PATH
-	allPagesInDir      bool          // GET_ALL_PAGES_IN_DIR
-	maxIdleConns       int           // MAX_IDLE_CONNECTIONS
-	idleConnTimeout    time.Duration // IDLE_CONNECTION_TIMEOUT
-	disableCompression bool          // DISABLE_COMPRESSION
+	awsRegion              string        // AWS_REGION
+	awsAPIEndpoint         string        // AWS_API_ENDPOINT
+	s3Bucket               string        // AWS_S3_BUCKET
+	s3KeyPrefix            string        // AWS_S3_KEY_PREFIX
+	indexDocument          string        // INDEX_DOCUMENT
+	directoryListing       bool          // DIRECTORY_LISTINGS
+	dirListingFormat       string        // DIRECTORY_LISTINGS_FORMAT
+	httpCacheControl       string        // HTTP_CACHE_CONTROL (max-age=86400, no-cache ...)
+	httpExpires            string        // HTTP_EXPIRES (Thu, 01 Dec 1994 16:00:00 GMT ...)
+	basicAuthUser          string        // BASIC_AUTH_USER
+	basicAuthPass          string        // BASIC_AUTH_PASS
+	port                   string        // APP_PORT
+	host                   string        // APP_HOST
+	accessLog              bool          // ACCESS_LOG
+	sslCert                string        // SSL_CERT_PATH
+	sslKey                 string        // SSL_KEY_PATH
+	stripPath              string        // STRIP_PATH
+	contentEncoding        bool          // CONTENT_ENCODING
+	contentEncodingHeader  string        // CONTENT_ENCODING_HEADER
+	corsAllowOrigin        string        // CORS_ALLOW_ORIGIN
+	corsAllowMethods       string        // CORS_ALLOW_METHODS
+	corsAllowHeaders       string        // CORS_ALLOW_HEADERS
+	corsMaxAge             int64         // CORS_MAX_AGE
+	healthCheckPath        string        // HEALTHCHECK_PATH
+	allPagesInDir          bool          // GET_ALL_PAGES_IN_DIR
+	maxIdleConns           int           // MAX_IDLE_CONNECTIONS
+	idleConnTimeout        time.Duration // IDLE_CONNECTION_TIMEOUT
+	disableCompression     bool          // DISABLE_COMPRESSION
 }
 
 type symlink struct {
@@ -181,6 +182,7 @@ func configFromEnvironmentVariables() *config {
 		sslKey:             os.Getenv("SSL_KEY_PATH"),
 		stripPath:          os.Getenv("STRIP_PATH"),
 		contentEncoding:    contentEncoding,
+		contentEncodingHeader: os.Getenv("CONTENT_ENCODING_HEADER"),
 		corsAllowOrigin:    os.Getenv("CORS_ALLOW_ORIGIN"),
 		corsAllowMethods:   os.Getenv("CORS_ALLOW_METHODS"),
 		corsAllowHeaders:   os.Getenv("CORS_ALLOW_HEADERS"),
@@ -359,12 +361,12 @@ func awss3(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, message, code)
 		return
 	}
-	setHeadersFromAwsResponse(w, obj)
+	setHeadersFromAwsResponse(w, obj, c)
 
 	io.Copy(w, obj.Body) // nolint
 }
 
-func setHeadersFromAwsResponse(w http.ResponseWriter, obj *s3.GetObjectOutput) {
+func setHeadersFromAwsResponse(w http.ResponseWriter, obj *s3.GetObjectOutput, c *config) {
 
 	// Cache-Control
 	if len(c.httpCacheControl) > 0 {
@@ -379,9 +381,12 @@ func setHeadersFromAwsResponse(w http.ResponseWriter, obj *s3.GetObjectOutput) {
 	} else {
 		setStrHeader(w, "Expires", obj.Expires)
 	}
-
 	setStrHeader(w, "Content-Disposition", obj.ContentDisposition)
-	setStrHeader(w, "Content-Encoding", obj.ContentEncoding)
+	contentEncodingHeader := obj.ContentEncoding
+	if len(c.contentEncodingHeader) > 0 {
+		contentEncodingHeader = &c.contentEncodingHeader
+	}
+	setStrHeader(w, "Content-Encoding", contentEncodingHeader)
 	setStrHeader(w, "Content-Language", obj.ContentLanguage)
 	setIntHeader(w, "Content-Length", obj.ContentLength)
 	setStrHeader(w, "Content-Range", obj.ContentRange)
