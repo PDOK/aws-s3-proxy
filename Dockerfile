@@ -1,5 +1,5 @@
 FROM scratch
- FROM golang:1.11-alpine3.8 AS build-env
+FROM golang:1.11-alpine3.8 AS build-env
 
 RUN apk update && apk upgrade && \
    apk add --no-cache bash git gcc musl-dev
