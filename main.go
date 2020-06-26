@@ -385,6 +385,9 @@ func setHeadersFromAwsResponse(w http.ResponseWriter, obj *s3.GetObjectOutput, c
 	contentEncodingHeader := obj.ContentEncoding
 	if len(c.contentEncodingHeader) > 0 {
 		contentEncodingHeader = &c.contentEncodingHeader
+	} else if *obj.ContentType == "application/vnd.mapbox-vector-tile" {
+		gzipVal := "gzip"
+		contentEncodingHeader = &gzipVal
 	}
 	setStrHeader(w, "Content-Encoding", contentEncodingHeader)
 	setStrHeader(w, "Content-Language", obj.ContentLanguage)
